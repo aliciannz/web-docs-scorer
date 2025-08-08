@@ -1,8 +1,3 @@
-"""
-Usage:
-  docscorer.py --input=<dir> [--output=<dir>] [--benchmark_config=<csv>] [--info_score_config=<dir>] [--lang_code_conversion=<json>] [--lang_families_config=<csv>] [--only_final_score=<y>] [--text_in_output=<y>]
-
-"""
 
 import logging
 import docopt
@@ -10,49 +5,30 @@ import os
 import pandas as pd
 import re
 import json
-import sys
+from docscorer.utils import average, join_utf_blocks, custom_mean
+from docscorer.modules.informativeness import Informativeness
+from docscorer.configuration import Configuration
 
-try:
-    from .utils import average, precision_round, join_utf_blocks, custom_mean
-except ImportError:
-    from utils import average, precision_round, join_utf_blocks, custom_mean
-try:
-  from .modules.informativeness import Informativeness
-except ImportError:
-  from modules.informativeness import Informativeness
 
-logging.basicConfig(
-        level=logging.INFO,  
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        stream=sys.stdout 
-    )
-   
 ## _____ CONFIGURATION FILES _______________________________________________________________________________________________________________
-CONFIG = {
-    #directories in CONFIG must be inicialized with a default value and other configuration values must be initially False
-    "benchmark_config": os.path.dirname(__file__)+"/configurations/language_adaption/medians_language.csv", 
-    "info_score_config": os.path.dirname(__file__)+"/configurations/interpolation_functions/",
-    "lang_code_conversion": os.path.dirname(__file__)+"/configurations/language_adaption/lang_code_conversion.json",
-    "lang_families_config": os.path.dirname(__file__)+"/configurations/language_adaption/lang_families_script.csv",
-    "text_in_output": False,
-    "only_final_score": False
-}
+
 
 ## _____ Class with all data and functions to be reused _______________________________________________________________________________________________________________
 class DocumentScorer:
-    def __init__(self):
-        benchmark_config= CONFIG["benchmark_config"] if CONFIG else os.path.dirname(__file__)+"/configurations/language_adaption/medians_language.csv"
-        info_score_config= CONFIG["info_score_config"] if CONFIG else os.path.dirname(__file__)+"/configurations/interpolation_functions"
-        lang_code_conversion= CONFIG["lang_code_conversion"] if CONFIG else os.path.dirname(__file__)+"/configurations/language_adaption/lang_code_conversion.json"
-        lang_families_config= CONFIG["lang_families_config"] if CONFIG else os.path.dirname(__file__)+"/configurations/language_adaption/lang_families_script.csv"
+    def __init__(self, config: Configuration):
+        
+        self.benchmark_config=config.benchmark_config 
+        self.info_score_config=config.info_score_config
+        self.lang_code_conversion=config.lang_code_conversion
+        self.lang_families_config=config.lang_families_config
 
         ## _____ LANGUAGE CODE ADAPTION ________________________________________________________________________________________________
-        with open(lang_code_conversion, "r", encoding="utf-8") as file:
+        with open(self.lang_code_conversion, "r", encoding="utf-8") as file:
             self.CODE_2_to_3_CONVERSION = json.load(file)
 
 
         ## _____ LANGUAGE ADAPTATION DATA ________________________________________________________________________________________________
-        df_lang_adaption = pd.read_csv(benchmark_config)
+        df_lang_adaption = pd.read_csv(self.benchmark_config)
         LANGUAGES = df_lang_adaption.language_3_chars.to_list()
         
         MODELED_LANGS_NUMBERS = {f"{line.language_3_chars}_{line.script}" : round(line.numbers_score, 1) for _, line in df_lang_adaption.iterrows()}
@@ -60,7 +36,7 @@ class DocumentScorer:
         MODELED_LANGS_SINGULAR_CHARS = {f"{line.language_3_chars}_{line.script}" : round(line.singular_chars_score, 1) for _, line in df_lang_adaption.iterrows()}
         
         ## _____ LANGUAGES_SCRIPTS ________________________________________________________________________________________________
-        df_families = pd.read_csv(lang_families_config)
+        df_families = pd.read_csv(self.lang_families_config)
         df_lang_no_data = df_families[~df_families.language_3_chars.isin(LANGUAGES)]
         df_lang_data = df_families[df_families.language_3_chars.isin(LANGUAGES)]
         df_lang_adaption = pd.merge(df_lang_data, df_lang_adaption, on=['language_3_chars', 'script'], how='inner') #language families + medians in the same df
@@ -183,7 +159,7 @@ class DocumentScorer:
         # self.spaces_pattern = join_utf_blocks(SPACES)
 
         ## _____ INFORMATIVENESS SCORE _______________________________________________________________________________________________________________
-        self.info = Informativeness(info_score_config)
+        self.info = Informativeness(self.info_score_config)
 
 
     ## _____SCORING FUNCTIONS _______________________________________________________________________________________________________________
@@ -421,118 +397,77 @@ class DocumentScorer:
         
         final_score = [round(score, 1) if score <= 10 else 10, round(language_score, 1), round(url_score, 1), round(punctuation_score, 1), round(singular_chars_score, 1), round(numbers_score, 1), round(repeated_score, 1), round(long_segments_scores[0], 1), round(long_segments_scores[1], 1), round(informativeness_score, 1)] 
         
-        if CONFIG and CONFIG["text_in_output"]:
+        if self.config.text_in_output:
             final_score.append(document_text.replace("\n", "\\n")) 
         return final_score
 
     def score_document(self, document, raw_score=False):
         return self.score_text(ref_lang=f"{document['document_lang']}_{document['script']}", lang_segments=document["langs"], scores_lang=document["scores"] if "scores" in document else False, document_text=document["text"], script_sys=document["script"], id=document["id"], raw_score=raw_score)
         
-    
-def score_directory(input_path, output_path):
-    ds=DocumentScorer()
-    for json_f in os.listdir(input_path):
-        if json_f.endswith(".jsonl"):
-            if not re.match("[a-z]{3}_[A-Z][a-z]{3}$", json_f.split(".")[0]):
-                logging.error(f"{json_f} is not a well formed named → eng_Latn.jsonl")
-                continue
-            documents = os.path.join(input_path, json_f)
-            file_name = os.path.splitext(os.path.basename(json_f))[0]
-            writing_path = os.path.join(output_path, f"{file_name}.csv")
-            df = pd.DataFrame(columns=["score"])
+        
+    def score_directory(self, input_path, output_path):
+        for json_f in os.listdir(input_path):
+            if json_f.endswith(".jsonl"):
+                if not re.match("[a-z]{3}_[A-Z][a-z]{3}$", json_f.split(".")[0]):
+                    logging.error(f"{json_f} is not a well formed named → eng_Latn.jsonl")
+                    continue
+                documents = os.path.join(input_path, json_f)
+                file_name = os.path.splitext(os.path.basename(json_f))[0]
+                writing_path = os.path.join(output_path, f"{file_name}.csv")
+                df = pd.DataFrame(columns=["score"])
 
-            lang_script = json_f.split(".")[0].split("_")
-            language = lang_script[0].lower()
-            script = lang_script[1].lower()
-            script = ds.EQUIVALENT_SCRIPTS[script] if script in ds.EQUIVALENT_SCRIPTS else script
-            
-            i = 0
-            logging.info(f"Processing: {file_name}")
-            with open(documents, "r", encoding="utf-8") as file:
-                n_lines = sum(1 for _ in file)
-                logging.info(f"{file_name} - {n_lines} documents")
-            with open(documents, "r", encoding="utf-8") as file:
-                for document in file:
-                    document = json.loads(document)
-                    document["document_lang"] = language
-                    document["script"] = script
-                    langs_fixed = []
-                    for x in document["langs"]:
-                        x=x.lower()
-                        #Script is added if "langs" includes language codes without script code
-                        if re.match("[a-z]{3}$", x):
-                            langs_fixed.append(f"{x}_{script}")
-                        elif re.match("[a-z]{3}_[a-z]{4}$", x):
-                            #Fix for very similar scripts or scripts that we want to be intended as the same, like Hans - Hant
-                            segm_lang_script = x.split("_")
-                            segm_script = ds.EQUIVALENT_SCRIPTS[segm_lang_script[1]] if segm_lang_script[1] in ds.EQUIVALENT_SCRIPTS else segm_lang_script[1]
-                            langs_fixed.append(f"{segm_lang_script[0]}_{segm_script}")
-                        else:
-                            langs_fixed.append(x)
-                    
-                    document["langs"] = langs_fixed
-                    document_score = ds.score_document(document=document)
-                    docid = document["id"]
-                    df.loc[docid] = [document_score]
-                    
-                    i+=1
-                    if i % 10000 == 0:
-                        logging.info(f"{document['document_lang']} - {i}/{n_lines}")
+                lang_script = json_f.split(".")[0].split("_")
+                language = lang_script[0].lower()
+                script = lang_script[1].lower()
+                script = self.EQUIVALENT_SCRIPTS[script] if script in self.EQUIVALENT_SCRIPTS else script
+                
+                i = 0
+                logging.info(f"Processing: {file_name}")
+                with open(documents, "r", encoding="utf-8") as file:
+                    n_lines = sum(1 for _ in file)
+                    logging.info(f"{file_name} - {n_lines} documents")
+                with open(documents, "r", encoding="utf-8") as file:
+                    for document in file:
+                        document = json.loads(document)
+                        document["document_lang"] = language
+                        document["script"] = script
+                        langs_fixed = []
+                        for x in document["langs"]:
+                            x=x.lower()
+                            #Script is added if "langs" includes language codes without script code
+                            if re.match("[a-z]{3}$", x):
+                                langs_fixed.append(f"{x}_{script}")
+                            elif re.match("[a-z]{3}_[a-z]{4}$", x):
+                                #Fix for very similar scripts or scripts that we want to be intended as the same, like Hans - Hant
+                                segm_lang_script = x.split("_")
+                                segm_script = self.EQUIVALENT_SCRIPTS[segm_lang_script[1]] if segm_lang_script[1] in self.EQUIVALENT_SCRIPTS else segm_lang_script[1]
+                                langs_fixed.append(f"{segm_lang_script[0]}_{segm_script}")
+                            else:
+                                langs_fixed.append(x)
+                        
+                        document["langs"] = langs_fixed
+                        document_score = self.score_document(document=document)
+                        docid = document["id"]
+                        df.loc[docid] = [document_score]
+                        
+                        i+=1
+                        if i % 10000 == 0:
+                            logging.info(f"{document['document_lang']} - {i}/{n_lines}")
 
-            df["wds_score"] = df.score.apply(lambda x: x[0])
-            if not CONFIG["only_final_score"]:
-                df["language_score"] = df.score.apply(lambda x: x[1])
-                df["url_score"] = df.score.apply(lambda x: x[2])
-                df["punctuation_score"] = df.score.apply(lambda x: x[3])
-                df["singular_chars_score"] = df.score.apply(lambda x: x[4])
-                df["numbers_score"] = df.score.apply(lambda x: x[5])
-                df["repeated_score"] = df.score.apply(lambda x: x[6])
-                df["n_long_segments_score"] = df.score.apply(lambda x: x[7])
-                df["great_segment_score"] = df.score.apply(lambda x: x[8])
-                df["informativeness_score"] = df.score.apply(lambda x: x[9])
-            if CONFIG["text_in_output"]:
-                df["text"] = df.score.apply(lambda x: x[10])
-            df.drop(columns=["score"], inplace=True)
-            df.to_csv(writing_path)
-            logging.info(f"Saved results in '{writing_path}'")
+                df["wds_score"] = df.score.apply(lambda x: x[0])
+                if not self.config.only_final_score:
+                    df["language_score"] = df.score.apply(lambda x: x[1])
+                    df["url_score"] = df.score.apply(lambda x: x[2])
+                    df["punctuation_score"] = df.score.apply(lambda x: x[3])
+                    df["singular_chars_score"] = df.score.apply(lambda x: x[4])
+                    df["numbers_score"] = df.score.apply(lambda x: x[5])
+                    df["repeated_score"] = df.score.apply(lambda x: x[6])
+                    df["n_long_segments_score"] = df.score.apply(lambda x: x[7])
+                    df["great_segment_score"] = df.score.apply(lambda x: x[8])
+                    df["informativeness_score"] = df.score.apply(lambda x: x[9])
+                if self.config.text_in_output:
+                    df["text"] = df.score.apply(lambda x: x[10])
+                df.drop(columns=["score"], inplace=True)
+                df.to_csv(writing_path)
+                logging.info(f"Saved results in '{writing_path}'")
 
-
-def main():
-    logging.info("Executing main program...")
-
-    args = docopt.docopt(__doc__, version='printbook v 1.0')
-
-    ## _____ INPUT-OUTPUT _______________________________________________________________________________________________________________
-    input_path=args['--input']
-    if( not os.path.exists(input_path)):
-        logging.error(f"File {input_path} not found")
-        sys.exit(-1)
-
-    output_path=args['--output']
-    if not output_path:
-        output_path = input_path+"/document_scores"
-        if (not os.path.exists(output_path)):
-            os.makedirs(output_path)
-    if( not os.path.exists(output_path)):
-        logging.error(f"Directory {output_path} not found")
-        sys.exit(-1)
-
-    for config_name, is_dir in CONFIG.items():
-        selected_config = args[f"--{config_name}"]
-        if CONFIG[config_name]:
-            #Directories
-            if selected_config:
-                CONFIG[config_name] = selected_config #If not expressed, the default directory is used
-            if( not os.path.exists(CONFIG[config_name])):
-                logging.error(f"File {CONFIG[config_name]} for {config_name} not found")
-                sys.exit(-1)
-        else:
-            #Config values
-            if selected_config:
-                CONFIG[config_name] = True
-
-    score_directory(input_path, output_path)
-    logging.info("Program finished")
-
-if __name__ == '__main__':
-    main()
