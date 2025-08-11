@@ -42,7 +42,7 @@ class DocumentScorer:
         self,
         ref_lang: str,
         lang_segments: List[str],
-        scores_lang: List[float],
+        scores_lang: Optional[List[float]],
         document_text: str,
         script_sys: str,
         id: str,
@@ -127,7 +127,7 @@ class DocumentScorer:
         return self.score_text(
             ref_lang=f"{document['document_lang']}_{document['script']}",
             lang_segments=document["langs"],
-            scores_lang=document["scores"] if "scores" in document else False,
+            scores_lang=document["scores"] if "scores" in document else None,
             document_text=document["text"],
             script_sys=document["script"],
             id=document["id"],

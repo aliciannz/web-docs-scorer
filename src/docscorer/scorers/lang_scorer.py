@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from docscorer.configuration import ScorerConfiguration
 from docscorer.scorers.base_scorer import BaseScorer
@@ -12,15 +12,15 @@ class LangScorer(BaseScorer):
         self,
         ref_language: str,
         lang_segments: List[str],
-        scores_lang: List[float],
+        scores_lang: Optional[List[float]],
         word_chars: List[int],
         id: str,
     ) -> float:
-        if scores_lang and (
-            len(lang_segments) != len(scores_lang)
-            or len(scores_lang) != len(word_chars)
-        ):
-            return 10  # Errors from unmatched scores
+        if scores_lang is not None:
+            if len(lang_segments) != len(scores_lang) or len(scores_lang) != len(
+                word_chars
+            ):
+                return 10  # Errors from unmatched scores
         menu_length = self._get_threshold(
             self.config.MENUS_AVERAGE_LENGTH, ref_language
         )
