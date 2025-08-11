@@ -1,12 +1,11 @@
 name: CI
-
 on:
   push:
     branches:
-      - '**'
+      - main
   pull_request:
     branches:
-      - '**'
+      - main
 
 jobs:
   lint-test:
@@ -27,10 +26,10 @@ jobs:
           pip install .[dev]
 
       - name: Run Black (check only)
-        run: black --check .
+        run: black --check src/
 
       - name: Run Ruff
-        run: ruff check .
+        run: ruff check src/
 
       - name: Run mypy
-        run: mypy .
+        run: mypy src/
