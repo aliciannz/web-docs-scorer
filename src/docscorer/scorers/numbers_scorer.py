@@ -1,8 +1,8 @@
 from docscorer.configuration import ScorerConfiguration
-from docscorer.scorers.base_scorer import BaseScorer
+from docscorer.scorers.utils import get_threshold, scale_value
 
 
-class NumsScorer(BaseScorer):
+class NumsScorer:
     def __init__(self, config: ScorerConfiguration):
         self.config = config
 
@@ -10,12 +10,12 @@ class NumsScorer(BaseScorer):
         if num_word_chars == 0:
             return 0.0
 
-        percent_max = self._get_threshold(self.config.NUMBERS_PERCENT_MAX, ref_language)
-        percent_bad = self._get_threshold(self.config.NUMBERS_PERCENT_BAD, ref_language)
-        percent_semibad = self._get_threshold(
+        percent_max = get_threshold(self.config.NUMBERS_PERCENT_MAX, ref_language)
+        percent_bad = get_threshold(self.config.NUMBERS_PERCENT_BAD, ref_language)
+        percent_semibad = get_threshold(
             self.config.NUMBERS_PERCENT_SEMIBAD, ref_language
         )
-        percent_desired = self._get_threshold(
+        percent_desired = get_threshold(
             self.config.NUMBERS_PERCENT_DESIRED, ref_language
         )
 
@@ -25,7 +25,7 @@ class NumsScorer(BaseScorer):
             return 10.0
         if ratio >= percent_bad:
             ratio = min(ratio, percent_max)
-            return self._scale(ratio, percent_max, percent_bad, 0.0, 5.0)
+            return scale_value(ratio, percent_max, percent_bad, 0.0, 5.0)
         if ratio >= percent_semibad:
-            return self._scale(ratio, percent_bad, percent_semibad, 5.0, 7.0)
-        return self._scale(ratio, percent_semibad, percent_desired, 7.0, 10.0)
+            return scale_value(ratio, percent_bad, percent_semibad, 5.0, 7.0)
+        return scale_value(ratio, percent_semibad, percent_desired, 7.0, 10.0)

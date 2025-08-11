@@ -5,10 +5,10 @@ from pathlib import Path
 import joblib
 import zstandard
 
-from docscorer.scorers.base_scorer import BaseScorer
+from docscorer.scorers.utils import scale_value
 
 
-class InformativenessScorer(BaseScorer):
+class InformativenessScorer:
     GROUPS = {
         **dict.fromkeys(["Grek", "Latn", "Cyrl", "Hang", "Jpan"], "GROUP_A"),
         **dict.fromkeys(
@@ -83,14 +83,14 @@ class InformativenessScorer(BaseScorer):
         # Below predicted
         if diff < 0:
             if abs(diff) <= self.TOLERANCE_SEMIBAD:
-                return self._scale(
+                return scale_value(
                     compression,
                     y_pred - self.TOLERANCE_GOOD,
                     y_pred - self.TOLERANCE_SEMIBAD,
                     10,
                     7,
                 )
-            return self._scale(
+            return scale_value(
                 compression,
                 y_pred - self.TOLERANCE_SEMIBAD,
                 y_pred - self.TOLERANCE_BAD,
@@ -100,14 +100,14 @@ class InformativenessScorer(BaseScorer):
 
         # Above predicted
         if diff <= self.TOLERANCE_SEMIBAD:
-            return self._scale(
+            return scale_value(
                 compression,
                 y_pred + self.TOLERANCE_GOOD,
                 y_pred + self.TOLERANCE_SEMIBAD,
                 10,
                 7,
             )
-        return self._scale(
+        return scale_value(
             compression,
             y_pred + self.TOLERANCE_SEMIBAD,
             y_pred + self.TOLERANCE_BAD,

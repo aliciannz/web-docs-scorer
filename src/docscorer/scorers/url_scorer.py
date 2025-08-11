@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List
 
 from docscorer.configuration import ScorerConfiguration
-from docscorer.scorers.base_scorer import BaseScorer
+from docscorer.scorers.utils import get_threshold, scale_value
 
 
 class URLThreshold(Enum):
@@ -11,7 +11,7 @@ class URLThreshold(Enum):
     HIGH = 10
 
 
-class URLScorer(BaseScorer):
+class URLScorer:
     MAX_SCORE = 10.0
     MIN_SCORE = 0.0
 
@@ -19,9 +19,7 @@ class URLScorer(BaseScorer):
         self.config = config
 
     def score(self, ref_language: str, document: str, word_chars: List[int]) -> float:
-        menu_length = self._get_threshold(
-            self.config.MENUS_AVERAGE_LENGTH, ref_language
-        )
+        menu_length = get_threshold(self.config.MENUS_AVERAGE_LENGTH, ref_language)
 
         # Only consider segments longer than menu_length
         long_segments = [x for x in word_chars if x > menu_length]
@@ -40,6 +38,6 @@ class URLScorer(BaseScorer):
         if url_quantity >= URLThreshold.MID.value:
             return self.MIN_SCORE
         if url_quantity > URLThreshold.HIGH.value:
-            return self._scale(url_quantity, 10, 7, 0.0, 5.0)
+            return scale_value(url_quantity, 10, 7, 0.0, 5.0)
         # else: between 3 and 5
-        return self._scale(url_quantity, 7, 3, 5.0, 10.0)
+        return scale_value(url_quantity, 7, 3, 5.0, 10.0)

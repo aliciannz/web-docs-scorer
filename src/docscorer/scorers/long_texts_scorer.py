@@ -1,10 +1,10 @@
 from typing import List, Tuple
 
 from docscorer.configuration import ScorerConfiguration
-from docscorer.scorers.base_scorer import BaseScorer
+from docscorer.scorers.utils import get_threshold
 
 
-class LongTextScorer(BaseScorer):
+class LongTextScorer:
     def __init__(self, config: ScorerConfiguration):
         self.config = config
 
@@ -15,8 +15,8 @@ class LongTextScorer(BaseScorer):
             lang_segments = [ref_language] * len(word_chars)
             # return (-1000, -1000)
 
-        long_text_min = self._get_threshold(self.config.LONG_TEXT_MIN, ref_language)
-        long_text_max = self._get_threshold(self.config.LONG_TEXT_MAX, ref_language)
+        long_text_min = get_threshold(self.config.LONG_TEXT_MIN, ref_language)
+        long_text_max = get_threshold(self.config.LONG_TEXT_MAX, ref_language)
 
         long_segments = []
         for n in range(len(word_chars)):

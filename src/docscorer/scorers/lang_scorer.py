@@ -1,10 +1,10 @@
 from typing import List, Optional
 
 from docscorer.configuration import ScorerConfiguration
-from docscorer.scorers.base_scorer import BaseScorer
+from docscorer.scorers.utils import get_threshold
 
 
-class LangScorer(BaseScorer):
+class LangScorer:
     def __init__(self, config: ScorerConfiguration):
         self.config = config
 
@@ -21,9 +21,7 @@ class LangScorer(BaseScorer):
                 word_chars
             ):
                 return 10  # Errors from unmatched scores
-        menu_length = self._get_threshold(
-            self.config.MENUS_AVERAGE_LENGTH, ref_language
-        )
+        menu_length = get_threshold(self.config.MENUS_AVERAGE_LENGTH, ref_language)
         correct_lang_chars = 0
         wrong_lang_chars = 0
         available_chars = False

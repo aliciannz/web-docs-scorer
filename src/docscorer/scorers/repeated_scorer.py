@@ -1,17 +1,15 @@
 from docscorer.configuration import ScorerConfiguration
-from docscorer.scorers.base_scorer import BaseScorer
+from docscorer.scorers.utils import get_threshold
 
 
-class RepeatedScorer(BaseScorer):
+class RepeatedScorer:
     MAX_SCORE = 10.0
 
     def __init__(self, config: ScorerConfiguration):
         self.config = config
 
     def score(self, ref_language: str, document: str) -> float:
-        menu_length = self._get_threshold(
-            self.config.MENUS_AVERAGE_LENGTH, ref_language
-        )
+        menu_length = get_threshold(self.config.MENUS_AVERAGE_LENGTH, ref_language)
 
         segments = [line for line in document.split("\n") if len(line) >= menu_length]
         if not segments:
