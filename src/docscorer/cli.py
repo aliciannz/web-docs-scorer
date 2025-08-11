@@ -22,7 +22,7 @@ import logging
 import sys
 from docopt import docopt
 from pathlib import Path
-from docscorer.configuration import Configuration
+from docscorer.configuration import ScorerConfiguration
 from docscorer.scorer import DocumentScorer
 
 def setup_logging():
@@ -45,7 +45,7 @@ def main():
     output_path.mkdir(parents=True, exist_ok=True)
 
     try:
-        config = Configuration(args)
+        config = ScorerConfiguration(args)
     except FileNotFoundError as e:
         logging.error(str(e))
         sys.exit(1)
