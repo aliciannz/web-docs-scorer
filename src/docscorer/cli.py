@@ -18,30 +18,35 @@ Options:
   -h --help                          Show this screen
   --version                          Show version
 """
+
 import logging
 import sys
-from docopt import docopt
 from pathlib import Path
+
+from docopt import docopt
+
 from docscorer.configuration import ScorerConfiguration
 from docscorer.scorer import DocumentScorer
+
 
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
-        stream=sys.stdout
+        stream=sys.stdout,
     )
+
 
 def main():
     setup_logging()
-    args = docopt(__doc__, version='DocumentScorer v1.0')
+    args = docopt(__doc__, version="DocumentScorer v1.0")
 
-    input_path = Path(args['--input'])
+    input_path = Path(args["--input"])
     if not input_path.exists():
         logging.error(f"Input path does not exist: {input_path}")
         sys.exit(1)
 
-    output_path = Path(args.get('--output') or input_path / "document_scores")
+    output_path = Path(args.get("--output") or input_path / "document_scores")
     output_path.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -53,6 +58,7 @@ def main():
     scorer = DocumentScorer(config)
     scorer.score_directory(input_path, output_path)
     logging.info("Scoring completed successfully.")
+
 
 if __name__ == "__main__":
     main()

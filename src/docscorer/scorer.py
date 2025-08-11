@@ -1,18 +1,22 @@
+import json
 import logging
 import os
-import pandas as pd
 import re
-import json
-from docscorer.utils import custom_mean
-from docscorer.scorers.informativeness_scorer import InformativenessScorer
+
+import pandas as pd
+
 from docscorer.configuration import ScorerConfiguration
 from docscorer.scorers.chars_scorer import CharsScorer
+from docscorer.scorers.informativeness_scorer import InformativenessScorer
 from docscorer.scorers.lang_scorer import LangScorer
 from docscorer.scorers.long_texts_scorer import LongTextScorer
 from docscorer.scorers.numbers_scorer import NumsScorer
 from docscorer.scorers.punct_scorer import PunctScorer
-from docscorer.scorers.url_scorer import URLScorer
 from docscorer.scorers.repeated_scorer import RepeatedScorer
+from docscorer.scorers.url_scorer import URLScorer
+from docscorer.utils import custom_mean
+
+
 class DocumentScorer:
     def __init__(self, config: ScorerConfiguration = None):
         self.config = config if config else ScorerConfiguration()
@@ -29,7 +33,6 @@ class DocumentScorer:
         self.lang_scorer = LangScorer(self.config)
         self.long_text_scorer = LongTextScorer(self.config)
         self.repeated_scorer = RepeatedScorer(self.config)
-        
 
     ## _____ MAIN SCORING FUNCTION _______________________________________________________________________________________________________________
 

@@ -1,5 +1,6 @@
-from docscorer.scorers.base_scorer import BaseScorer
 from docscorer.configuration import ScorerConfiguration
+from docscorer.scorers.base_scorer import BaseScorer
+
 
 class NumsScorer(BaseScorer):
     def __init__(self, config: ScorerConfiguration):
@@ -11,8 +12,12 @@ class NumsScorer(BaseScorer):
 
         percent_max = self._get_threshold(self.config.NUMBERS_PERCENT_MAX, ref_language)
         percent_bad = self._get_threshold(self.config.NUMBERS_PERCENT_BAD, ref_language)
-        percent_semibad = self._get_threshold(self.config.NUMBERS_PERCENT_SEMIBAD, ref_language)
-        percent_desired = self._get_threshold(self.config.NUMBERS_PERCENT_DESIRED, ref_language)
+        percent_semibad = self._get_threshold(
+            self.config.NUMBERS_PERCENT_SEMIBAD, ref_language
+        )
+        percent_desired = self._get_threshold(
+            self.config.NUMBERS_PERCENT_DESIRED, ref_language
+        )
 
         ratio = round((num_numbers / num_word_chars) * 100, 1)
 

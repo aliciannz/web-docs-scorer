@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+# #!/usr/bin/env python
 from importlib.metadata import version
 
-name="docscorer"
+name = "docscorer"
 __version__ = version(name)
 
-from .docscorer import DocumentScorer
+from docscorer.scorer import DocumentScorer

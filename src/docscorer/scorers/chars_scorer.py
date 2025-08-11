@@ -1,5 +1,5 @@
-from docscorer.scorers.base_scorer import BaseScorer
 from docscorer.configuration import ScorerConfiguration
+from docscorer.scorers.base_scorer import BaseScorer
 
 
 class CharsScorer(BaseScorer):
@@ -12,8 +12,12 @@ class CharsScorer(BaseScorer):
         if num_word_chars == 0:
             return 0
 
-        percent_max = self._get_threshold(self.config.SINGULAR_CHARS_PERCENT_MAX, ref_language)
-        percent_bad = self._get_threshold(self.config.SINGULAR_CHARS_PERCENT_BAD, ref_language)
+        percent_max = self._get_threshold(
+            self.config.SINGULAR_CHARS_PERCENT_MAX, ref_language
+        )
+        percent_bad = self._get_threshold(
+            self.config.SINGULAR_CHARS_PERCENT_BAD, ref_language
+        )
         percent_semibad = self._get_threshold(
             self.config.SINGULAR_CHARS_PERCENT_SEMIBAD, ref_language
         )

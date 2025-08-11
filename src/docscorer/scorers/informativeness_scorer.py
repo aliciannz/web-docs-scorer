@@ -1,12 +1,36 @@
 import os
+import re
+
 import joblib
 import zstandard
-import re
+
 from docscorer.scorers.base_scorer import BaseScorer
+
+
 class InformativenessScorer(BaseScorer):
     GROUPS = {
         **dict.fromkeys(["Grek", "Latn", "Cyrl", "Hang", "Jpan"], "GROUP_A"),
-        **dict.fromkeys(["Deva", "Beng", "Telu", "Tibt", "Geor", "Gujr", "Khmr", "Knda", "Laoo", "Mlym", "Mymr", "Orya", "Sinh", "Taml", "Thai", "Olck"], "GROUP_B"),
+        **dict.fromkeys(
+            [
+                "Deva",
+                "Beng",
+                "Telu",
+                "Tibt",
+                "Geor",
+                "Gujr",
+                "Khmr",
+                "Knda",
+                "Laoo",
+                "Mlym",
+                "Mymr",
+                "Orya",
+                "Sinh",
+                "Taml",
+                "Thai",
+                "Olck",
+            ],
+            "GROUP_B",
+        ),
         **dict.fromkeys(["Arab", "Armn", "Ethi", "Guru", "Hebr"], "GROUP_C"),
         **dict.fromkeys(["Hans", "Hant"], "GROUP_D"),
     }
@@ -41,7 +65,9 @@ class InformativenessScorer(BaseScorer):
         # Group A is the default
         return self.GROUPS.get(script_code, "GROUP_A")
 
-    def _calculate_information_score(self, raw_weight: int, compression: float, script_code: str) -> float:
+    def _calculate_information_score(
+        self, raw_weight: int, compression: float, script_code: str
+    ) -> float:
         group = self._get_group(script_code)
         raw_weight = min(raw_weight, self.OUTSIDERS_FIX[group])
 
@@ -56,13 +82,37 @@ class InformativenessScorer(BaseScorer):
         # Below predicted
         if diff < 0:
             if abs(diff) <= self.TOLERANCE_SEMIBAD:
-                return self._scale(compression, y_pred - self.TOLERANCE_GOOD, y_pred - self.TOLERANCE_SEMIBAD, 10, 7)
-            return self._scale(compression, y_pred - self.TOLERANCE_SEMIBAD, y_pred - self.TOLERANCE_BAD, 7, 0)
+                return self._scale(
+                    compression,
+                    y_pred - self.TOLERANCE_GOOD,
+                    y_pred - self.TOLERANCE_SEMIBAD,
+                    10,
+                    7,
+                )
+            return self._scale(
+                compression,
+                y_pred - self.TOLERANCE_SEMIBAD,
+                y_pred - self.TOLERANCE_BAD,
+                7,
+                0,
+            )
 
         # Above predicted
         if diff <= self.TOLERANCE_SEMIBAD:
-            return self._scale(compression, y_pred + self.TOLERANCE_GOOD, y_pred + self.TOLERANCE_SEMIBAD, 10, 7)
-        return self._scale(compression, y_pred + self.TOLERANCE_SEMIBAD, y_pred + self.TOLERANCE_BAD, 7, 0)
+            return self._scale(
+                compression,
+                y_pred + self.TOLERANCE_GOOD,
+                y_pred + self.TOLERANCE_SEMIBAD,
+                10,
+                7,
+            )
+        return self._scale(
+            compression,
+            y_pred + self.TOLERANCE_SEMIBAD,
+            y_pred + self.TOLERANCE_BAD,
+            7,
+            0,
+        )
 
     def score(self, text: str, script_code: str) -> float:
         text = re.sub(r"\d", "1", text.lower())
