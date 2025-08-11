@@ -61,7 +61,7 @@ class DocumentScorer:
         punctuation_chars = [x[1] for x in condensed_data]
         singular_chars = [x[2] for x in condensed_data]
         numbers = [x[3] for x in condensed_data]
-        ref_lang = ref_lang[0] if type(ref_lang) == list else ref_lang
+        ref_lang = ref_lang[0] if isinstance(ref_lang, list) else ref_lang
 
         num_singular_chars = sum(singular_chars)
         num_word_chars = sum(word_chars)
