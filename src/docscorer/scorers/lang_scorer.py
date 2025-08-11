@@ -1,18 +1,29 @@
-from docscorer.scorers.base_scorer import BaseScorer
 from typing import List
+
 from docscorer.configuration import ScorerConfiguration
+from docscorer.scorers.base_scorer import BaseScorer
+
 
 class LangScorer(BaseScorer):
     def __init__(self, config: ScorerConfiguration):
         self.config = config
 
-    def score(self, ref_language: str, lang_segments: List[str], scores_lang: List[str], word_chars: List[str], id) -> float:
+    def score(
+        self,
+        ref_language: str,
+        lang_segments: List[str],
+        scores_lang: List[str],
+        word_chars: List[str],
+        id,
+    ) -> float:
         if scores_lang and (
             len(lang_segments) != len(scores_lang)
             or len(scores_lang) != len(word_chars)
         ):
             return 10  # Errors from unmatched scores
-        menu_length = self._get_threshold(self.config.MENUS_AVERAGE_LENGTH, ref_language)
+        menu_length = self._get_threshold(
+            self.config.MENUS_AVERAGE_LENGTH, ref_language
+        )
         correct_lang_chars = 0
         wrong_lang_chars = 0
         available_chars = False
@@ -36,4 +47,4 @@ class LangScorer(BaseScorer):
                 )
             return 0
         results = correct_lang_chars / (correct_lang_chars + wrong_lang_chars) * 10
-        return round(results, 1) if results <= 10 else 10
+        return results if results <= 10 else 10

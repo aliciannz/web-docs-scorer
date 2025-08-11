@@ -1,12 +1,16 @@
-from docscorer.scorers.base_scorer import BaseScorer
 from typing import List
+
 from docscorer.configuration import ScorerConfiguration
+from docscorer.scorers.base_scorer import BaseScorer
+
 
 class LongTextScorer(BaseScorer):
     def __init__(self, config: ScorerConfiguration):
         self.config = config
 
-    def score(self, ref_language: str, lang_segments: List[str], word_chars: List[str]) -> float:
+    def score(
+        self, ref_language: str, lang_segments: List[str], word_chars: List[str]
+    ) -> float:
         if len(word_chars) != len(lang_segments):
             lang_segments = [ref_language] * len(word_chars)
             # return (-1000, -1000)
@@ -36,9 +40,8 @@ class LongTextScorer(BaseScorer):
                 sum(highter_segments) + 0.1 * (len(highter_segments))
             ) / len(highter_segments)
 
-        score_n_segments = round(n_segments / self.config.DESIRED_LONG_TEXTS * 10, 2)
+        score_n_segments = n_segments / self.config.DESIRED_LONG_TEXTS * 10
         return (
             score_n_segments if score_n_segments <= 10 else 10,
             score_very_long_segments if score_very_long_segments <= 10 else 10,
         )
-

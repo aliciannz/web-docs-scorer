@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict
 
+
 class BaseScorer(ABC):
     @abstractmethod
     def score(self):
@@ -21,8 +22,6 @@ class BaseScorer(ABC):
         """Scale a value linearly into a score range."""
         if min_value == max_value:
             return 0.0
-        return round(
-            (value - min_value) / (max_value - min_value) * (max_score - min_score)
-            + min_score,
-            1,
-        )
+        return (value - min_value) / (max_value - min_value) * (
+            max_score - min_score
+        ) + min_score
