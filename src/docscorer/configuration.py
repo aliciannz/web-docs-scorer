@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
 import pandas as pd
 
@@ -9,12 +10,16 @@ from docscorer.utils import average, join_utf_blocks
 
 @dataclass
 class ScorerConfiguration:
-    def __init__(self, args: dict = None):
+    def __init__(self, args: Optional[Dict[str, Any]] = None):
         base_dir = Path(__file__).resolve().parent
 
-        def get_path(default, arg_key):
+        def get_path(
+            default: Union[str, Path],
+            arg_key: str,
+            args: Optional[Dict[str, Any]] = None,
+        ) -> Path:
             if args is not None and arg_key in args and args[arg_key] is not None:
-                return Path(args.get(arg_key))
+                return Path(args[arg_key])
             else:
                 return Path(default)
 
@@ -54,7 +59,7 @@ class ScorerConfiguration:
         with open(self.lang_code_conversion, "r", encoding="utf-8") as file:
             self.CODE_2_to_3_CONVERSION = json.load(file)
 
-        ## _____ LANGUAGE ADAPTATION DATA ________________________________________________________________________________________________
+        ## LANGUAGE ADAPTATION DATA
         df_lang_adaption = pd.read_csv(self.benchmark_config)
         LANGUAGES = df_lang_adaption.language_3_chars.to_list()
 
@@ -73,7 +78,7 @@ class ScorerConfiguration:
             for _, line in df_lang_adaption.iterrows()
         }
 
-        ## _____ LANGUAGES_SCRIPTS ________________________________________________________________________________________________
+        ## LANGUAGES_SCRIPTS
         df_families = pd.read_csv(self.lang_families_config)
         df_lang_no_data = df_families[~df_families.language_3_chars.isin(LANGUAGES)]
         df_lang_data = df_families[df_families.language_3_chars.isin(LANGUAGES)]
@@ -112,7 +117,7 @@ class ScorerConfiguration:
 
         self.EQUIVALENT_SCRIPTS = {"hant": "hans"}
 
-        ## _____ REFERENCE RATIO VALUES FOR SPANISH ________________________________________________________________________________________________
+        ## REFERENCE RATIO VALUES FOR SPANISH
         # Current values in the provided csv
         ref_punctuation = MODELED_LANGS_PUNCTUATION["spa_Latn"]
         ref_numbers = MODELED_LANGS_NUMBERS["spa_Latn"]
@@ -144,16 +149,16 @@ class ScorerConfiguration:
         long_text_min = 250
         long_text_max = 1000
 
-        ## _____ MENUS ADAPTATION _______________________________________________________________________________________________________________
+        ## MENUS ADAPTATION
         self.MENUS_AVERAGE_LENGTH = {
             lang: round(ref_punctuation * menu_length / val)
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
         self.MENUS_AVERAGE_LENGTH["standard"] = average(
-            self.MENUS_AVERAGE_LENGTH.values()
+            list(self.MENUS_AVERAGE_LENGTH.values())
         )
 
-        ## _____ PUNCTUATION SCORING _______________________________________________________________________________________________________________
+        ## PUNCTUATION SCORING
         self.PUNCTUATION_PERCENT_MAX = {
             lang: (
                 round(val * punct_max / ref_punctuation, 1)
@@ -163,7 +168,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
         self.PUNCTUATION_PERCENT_MAX["standard"] = average(
-            self.PUNCTUATION_PERCENT_MAX.values()
+            list(self.PUNCTUATION_PERCENT_MAX.values())
         )
 
         self.PUNCTUATION_PERCENT_BAD = {
@@ -174,8 +179,8 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
         self.PUNCTUATION_PERCENT_BAD["standard"] = (
-            average([x[0] for x in self.PUNCTUATION_PERCENT_BAD.values()]),
-            average([x[1] for x in self.PUNCTUATION_PERCENT_BAD.values()]),
+            average([x[0] for x in list(self.PUNCTUATION_PERCENT_BAD.values())]),
+            average([x[1] for x in list(self.PUNCTUATION_PERCENT_BAD.values())]),
         )
 
         self.PUNCTUATION_PERCENT_SEMIBAD = {
@@ -186,8 +191,8 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
         self.PUNCTUATION_PERCENT_SEMIBAD["standard"] = (
-            average([x[0] for x in self.PUNCTUATION_PERCENT_SEMIBAD.values()]),
-            average([x[1] for x in self.PUNCTUATION_PERCENT_SEMIBAD.values()]),
+            average([x[0] for x in list(self.PUNCTUATION_PERCENT_SEMIBAD.values())]),
+            average([x[1] for x in list(self.PUNCTUATION_PERCENT_SEMIBAD.values())]),
         )
 
         self.PUNCTUATION_PERCENT_DESIRED_MAX = {
@@ -195,7 +200,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
         self.PUNCTUATION_PERCENT_DESIRED_MAX["standard"] = average(
-            self.PUNCTUATION_PERCENT_DESIRED_MAX.values()
+            list(self.PUNCTUATION_PERCENT_DESIRED_MAX.values())
         )
 
         self.PUNCTUATION_PERCENT_DESIRED_MIN = {
@@ -203,10 +208,10 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
         self.PUNCTUATION_PERCENT_DESIRED_MIN["standard"] = average(
-            self.PUNCTUATION_PERCENT_DESIRED_MIN.values()
+            list(self.PUNCTUATION_PERCENT_DESIRED_MIN.values())
         )
 
-        ## _____ SINGULAR CHARS SCORING _______________________________________________________________________________________________________________
+        ## SINGULAR CHARS SCORING
         self.SINGULAR_CHARS_PERCENT_MAX = {
             lang: (
                 round(val * singular_chars_max / ref_singular_chars, 1)
@@ -216,7 +221,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_SINGULAR_CHARS.items()
         }
         self.SINGULAR_CHARS_PERCENT_MAX["standard"] = average(
-            self.SINGULAR_CHARS_PERCENT_MAX.values()
+            list(self.SINGULAR_CHARS_PERCENT_MAX.values())
         )
 
         self.SINGULAR_CHARS_PERCENT_BAD = {
@@ -224,7 +229,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_SINGULAR_CHARS.items()
         }
         self.SINGULAR_CHARS_PERCENT_BAD["standard"] = average(
-            self.SINGULAR_CHARS_PERCENT_BAD.values()
+            list(self.SINGULAR_CHARS_PERCENT_BAD.values())
         )
 
         self.SINGULAR_CHARS_PERCENT_SEMIBAD = {
@@ -232,7 +237,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_SINGULAR_CHARS.items()
         }
         self.SINGULAR_CHARS_PERCENT_SEMIBAD["standard"] = average(
-            self.SINGULAR_CHARS_PERCENT_SEMIBAD.values()
+            list(self.SINGULAR_CHARS_PERCENT_SEMIBAD.values())
         )
 
         self.SINGULAR_CHARS_PERCENT_DESIRED = {
@@ -240,10 +245,10 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_SINGULAR_CHARS.items()
         }
         self.SINGULAR_CHARS_PERCENT_DESIRED["standard"] = average(
-            self.SINGULAR_CHARS_PERCENT_DESIRED.values()
+            list(self.SINGULAR_CHARS_PERCENT_DESIRED.values())
         )
 
-        ## _____ NUMBERS SCORING _______________________________________________________________________________________________________________
+        ## NUMBERS SCORING
         self.NUMBERS_PERCENT_MAX = {
             lang: (
                 round(val * numbers_max / ref_numbers, 1)
@@ -253,7 +258,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_NUMBERS.items()
         }
         self.NUMBERS_PERCENT_MAX["standard"] = average(
-            self.NUMBERS_PERCENT_MAX.values()
+            list(self.NUMBERS_PERCENT_MAX.values())
         )
 
         self.NUMBERS_PERCENT_BAD = {
@@ -265,7 +270,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_NUMBERS.items()
         }
         self.NUMBERS_PERCENT_BAD["standard"] = average(
-            self.NUMBERS_PERCENT_BAD.values()
+            list(self.NUMBERS_PERCENT_BAD.values())
         )
 
         self.NUMBERS_PERCENT_SEMIBAD = {
@@ -273,7 +278,7 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_NUMBERS.items()
         }
         self.NUMBERS_PERCENT_SEMIBAD["standard"] = average(
-            self.NUMBERS_PERCENT_SEMIBAD.values()
+            list(self.NUMBERS_PERCENT_SEMIBAD.values())
         )
 
         self.NUMBERS_PERCENT_DESIRED = {
@@ -281,26 +286,26 @@ class ScorerConfiguration:
             for lang, val in MODELED_LANGS_NUMBERS.items()
         }
         self.NUMBERS_PERCENT_DESIRED["standard"] = average(
-            self.NUMBERS_PERCENT_DESIRED.values()
+            list(self.NUMBERS_PERCENT_DESIRED.values())
         )
 
-        ## _____ LONG SEGMENTS SCORING _______________________________________________________________________________________________________________
+        ## LONG SEGMENTS SCORING
         self.LONG_TEXT_MAX = {
             lang: round(ref_punctuation * long_text_max / val)
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
-        self.LONG_TEXT_MAX["standard"] = average(self.LONG_TEXT_MAX.values())
+        self.LONG_TEXT_MAX["standard"] = average(list(self.LONG_TEXT_MAX.values()))
 
         self.LONG_TEXT_MIN = {
             lang: round(ref_punctuation * long_text_min / val)
             for lang, val in MODELED_LANGS_PUNCTUATION.items()
         }
-        self.LONG_TEXT_MIN["standard"] = average(self.LONG_TEXT_MIN.values())
+        self.LONG_TEXT_MIN["standard"] = average(list(self.LONG_TEXT_MIN.values()))
 
         # Number of long texts that means a 10 score
         self.DESIRED_LONG_TEXTS = 10
 
-        ## _____ CHARS DETECTION _______________________________________________________________________________________________________________
+        ## CHARS DETECTION
         # Regex unicode codes for char-type count
         SINGULAR_CHARS = [
             "0023-0026",

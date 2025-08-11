@@ -1,24 +1,3 @@
-"""
-Document Scoring Tool
-
-Usage:
-  cli.py --input=<input_path> [--output=<output_path>] [--benchmark_config=<path>] [--info_score_config=<path>] [--lang_code_conversion=<path>] [--lang_families_config=<path>] [--text_in_output] [--only_final_score]
-  cli.py (-h | --help)
-  cli.py --version
-
-Options:
-  --input=<input_path>               Path to input directory with .jsonl files
-  --output=<output_path>             Path to save output .csv files [default: <input_path>/document_scores]
-  --benchmark_config=<path>          Path to benchmark CSV
-  --info_score_config=<path>         Path to informativeness config dir
-  --lang_code_conversion=<path>      Path to lang_code_conversion.json
-  --lang_families_config=<path>      Path to lang families CSV
-  --text_in_output                   Include original text in output
-  --only_final_score                 Only include final score in output
-  -h --help                          Show this screen
-  --version                          Show version
-"""
-
 import logging
 import sys
 from pathlib import Path
@@ -28,8 +7,30 @@ from docopt import docopt
 from docscorer.configuration import ScorerConfiguration
 from docscorer.scorer import DocumentScorer
 
+usage = (
+    "Document Scoring Tool\n\n"
+    "Usage:\n"
+    "  cli.py --input=<input_path> [--output=<output_path>] "
+    "[--benchmark_config=<path>] [--info_score_config=<path>] "
+    "[--lang_code_conversion=<path>] [--lang_families_config=<path>] "
+    "[--text_in_output] [--only_final_score]\n"
+    "  cli.py (-h | --help)\n"
+    "  cli.py --version\n\n"
+    "Options:\n"
+    "  --input=<input_path>               Path to input directory with .jsonl files\n"
+    "  --output=<output_path>             Path to save output .csv files [default: <input_path>/document_scores]\n"  # noqa: E501
+    "  --benchmark_config=<path>          Path to benchmark CSV\n"
+    "  --info_score_config=<path>         Path to informativeness config dir\n"
+    "  --lang_code_conversion=<path>      Path to lang_code_conversion.json\n"
+    "  --lang_families_config=<path>      Path to lang families CSV\n"
+    "  --text_in_output                   Include original text in output\n"
+    "  --only_final_score                 Only include final score in output\n"
+    "  -h --help                         Show this screen\n"
+    "  --version                         Show version\n"
+)
 
-def setup_logging():
+
+def setup_logging() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
@@ -37,9 +38,9 @@ def setup_logging():
     )
 
 
-def main():
+def main() -> None:
     setup_logging()
-    args = docopt(__doc__, version="DocumentScorer v1.0")
+    args = docopt(usage, version="DocumentScorer v1.0")
 
     input_path = Path(args["--input"])
     if not input_path.exists():

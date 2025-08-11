@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 
 import joblib
 import zstandard
@@ -54,7 +55,7 @@ class InformativenessScorer(BaseScorer):
     TOLERANCE_BAD = 20
     TOLERANCE_SEMIBAD = 15
 
-    def __init__(self, config_files: str):
+    def __init__(self, config_files: Path):
         self.cctx = zstandard.ZstdCompressor()
         self.functions = {
             group: joblib.load(os.path.join(config_files, file))

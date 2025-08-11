@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -18,7 +20,7 @@ from docscorer.utils import custom_mean
 
 
 class DocumentScorer:
-    def __init__(self, config: ScorerConfiguration = None):
+    def __init__(self, config: Optional[ScorerConfiguration] = None):
         self.config = config if config else ScorerConfiguration()
         self.benchmark_config = self.config.benchmark_config
         self.info_score_config = self.config.info_score_config
@@ -34,18 +36,18 @@ class DocumentScorer:
         self.long_text_scorer = LongTextScorer(self.config)
         self.repeated_scorer = RepeatedScorer(self.config)
 
-    ## _____ MAIN SCORING FUNCTION _______________________________________________________________________________________________________________
+    ## MAIN SCORING FUNCTION
 
     def score_text(
         self,
-        ref_lang,
-        lang_segments,
-        scores_lang,
-        document_text,
-        script_sys,
-        id,
-        raw_score,
-    ):
+        ref_lang: str,
+        lang_segments: List[str],
+        scores_lang: List[float],
+        document_text: str,
+        script_sys: str,
+        id: str,
+        raw_score: float,
+    ) -> float | List[float]:
 
         condensed_data = [
             (
@@ -102,7 +104,7 @@ class DocumentScorer:
         if raw_score:
             return round(score, 1) if score <= 10 else 10
 
-        final_score = [
+        final_score: List[Any] = [
             round(score, 1) if score <= 10 else 10,
             round(language_score, 1),
             round(url_score, 1),
@@ -119,7 +121,9 @@ class DocumentScorer:
             final_score.append(document_text.replace("\n", "\\n"))
         return final_score
 
-    def score_document(self, document, raw_score=False):
+    def score_document(
+        self, document: Dict[str, Any], raw_score: bool = False
+    ) -> float | List[float]:
         return self.score_text(
             ref_lang=f"{document['document_lang']}_{document['script']}",
             lang_segments=document["langs"],
@@ -130,7 +134,7 @@ class DocumentScorer:
             raw_score=raw_score,
         )
 
-    def score_directory(self, input_path, output_path):
+    def score_directory(self, input_path: Path, output_path: Path) -> None:
         for json_f in os.listdir(input_path):
             if json_f.endswith(".jsonl"):
                 if not re.match("[a-z]{3}_[A-Z][a-z]{3}$", json_f.split(".")[0]):
@@ -158,23 +162,25 @@ class DocumentScorer:
                     n_lines = sum(1 for _ in file)
                     logging.info(f"{file_name} - {n_lines} documents")
                 with open(documents, "r", encoding="utf-8") as file:
-                    for document in file:
-                        document = json.loads(document)
+                    for document_file in file:
+                        document = json.loads(document_file)
                         document["document_lang"] = language
                         document["script"] = script
                         langs_fixed = []
-                        document["langs"] = ["whatever"]
                         for x in document["langs"]:
                             x = x.lower()
-                            # Script is added if "langs" includes language codes without script code
+                            # Script added if "langs" includes
+                            # language codes w/o script code
                             if re.match("[a-z]{3}$", x):
                                 langs_fixed.append(f"{x}_{script}")
                             elif re.match("[a-z]{3}_[a-z]{4}$", x):
-                                # Fix for very similar scripts or scripts that we want to be intended as the same, like Hans - Hant
+                                # Fix for very similar scripts or scripts that
+                                # we want to be intended as the same, like Hans - Hant
                                 segm_lang_script = x.split("_")
                                 segm_script = (
-                                    self.EQUIVALENT_SCRIPTS[segm_lang_script[1]]
-                                    if segm_lang_script[1] in self.EQUIVALENT_SCRIPTS
+                                    self.config.EQUIVALENT_SCRIPTS[segm_lang_script[1]]
+                                    if segm_lang_script[1]
+                                    in self.config.EQUIVALENT_SCRIPTS
                                     else segm_lang_script[1]
                                 )
                                 langs_fixed.append(

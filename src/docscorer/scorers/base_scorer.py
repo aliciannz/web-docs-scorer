@@ -1,13 +1,8 @@
-from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Any
 
 
-class BaseScorer(ABC):
-    @abstractmethod
-    def score(self):
-        pass
-
-    def _get_threshold(self, table: Dict[str, float], language: str) -> float:
+class BaseScorer:
+    def _get_threshold(self, table: Any, language: str) -> Any:
         """Fetch a language-specific threshold, falling back to 'standard'."""
         return table.get(language, table["standard"])
 

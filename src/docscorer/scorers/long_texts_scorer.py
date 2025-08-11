@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from docscorer.configuration import ScorerConfiguration
 from docscorer.scorers.base_scorer import BaseScorer
@@ -9,8 +9,8 @@ class LongTextScorer(BaseScorer):
         self.config = config
 
     def score(
-        self, ref_language: str, lang_segments: List[str], word_chars: List[str]
-    ) -> float:
+        self, ref_language: str, lang_segments: List[str], word_chars: List[int]
+    ) -> Tuple[float, float]:
         if len(word_chars) != len(lang_segments):
             lang_segments = [ref_language] * len(word_chars)
             # return (-1000, -1000)
