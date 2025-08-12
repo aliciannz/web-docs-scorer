@@ -1,5 +1,4 @@
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -8,7 +7,6 @@ import pandas as pd
 from docscorer.utils import average, join_utf_blocks
 
 
-@dataclass
 class ScorerConfiguration:
     def __init__(self, args: Optional[Dict[str, Any]] = None):
         base_dir = Path(__file__).resolve().parent
@@ -28,7 +26,12 @@ class ScorerConfiguration:
             "--benchmark_config",
         )
         self.info_score_config = get_path(
-            base_dir / "configurations/interpolation_functions/", "--info_score_config"
+            base_dir / "configurations/informativeness_config.json",
+            "--info_score_config",
+        )
+        self.interpolation_functions_dir = get_path(
+            base_dir / "configurations/interpolation_functions",
+            "--interpolation_functions_dir",
         )
         self.lang_code_conversion = get_path(
             base_dir / "configurations/language_adaption/lang_code_conversion.json",
@@ -51,6 +54,7 @@ class ScorerConfiguration:
             "info_score_config",
             "lang_code_conversion",
             "lang_families_config",
+            "interpolation_functions_dir",
         ]:
             path = getattr(self, attr)
             if not path.exists():

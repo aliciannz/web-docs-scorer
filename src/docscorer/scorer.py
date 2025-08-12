@@ -23,11 +23,12 @@ class DocumentScorer:
     def __init__(self, config: Optional[ScorerConfiguration] = None):
         self.config = config if config else ScorerConfiguration()
         self.benchmark_config = self.config.benchmark_config
-        self.info_score_config = self.config.info_score_config
         self.lang_code_conversion = self.config.lang_code_conversion
         self.lang_families_config = self.config.lang_families_config
-
-        self.info_scorer = InformativenessScorer(self.info_score_config)
+        self.interpolation_functions_dir = self.config.interpolation_functions_dir
+        self.info_scorer = InformativenessScorer(
+            self.config.info_score_config, self.config.interpolation_functions_dir
+        )
         self.punct_scorer = PunctScorer(self.config)
         self.url_scorer = URLScorer(self.config)
         self.numbers_scorer = NumsScorer(self.config)

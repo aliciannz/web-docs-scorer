@@ -1,6 +1,8 @@
+import json
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 import joblib
 import zstandard
@@ -9,60 +11,30 @@ from docscorer.scorers.utils import scale_value
 
 
 class InformativenessScorer:
-    GROUPS = {
-        **dict.fromkeys(["Grek", "Latn", "Cyrl", "Hang", "Jpan"], "GROUP_A"),
-        **dict.fromkeys(
-            [
-                "Deva",
-                "Beng",
-                "Telu",
-                "Tibt",
-                "Geor",
-                "Gujr",
-                "Khmr",
-                "Knda",
-                "Laoo",
-                "Mlym",
-                "Mymr",
-                "Orya",
-                "Sinh",
-                "Taml",
-                "Thai",
-                "Olck",
-            ],
-            "GROUP_B",
-        ),
-        **dict.fromkeys(["Arab", "Armn", "Ethi", "Guru", "Hebr"], "GROUP_C"),
-        **dict.fromkeys(["Hans", "Hant"], "GROUP_D"),
-    }
-
-    FUNCTION_FILES = {
-        "GROUP_A": "function_group_a.pkl",
-        "GROUP_B": "function_group_b.pkl",
-        "GROUP_C": "function_group_c.pkl",
-        "GROUP_D": "function_group_d.pkl",
-    }
-
-    OUTSIDERS_FIX = {
-        "GROUP_A": 180_000,
-        "GROUP_B": 250_000,
-        "GROUP_C": 180_000,
-        "GROUP_D": 75_000,
-    }
 
     # Thresholds for score ranges
     TOLERANCE_GOOD = 10
     TOLERANCE_BAD = 20
     TOLERANCE_SEMIBAD = 15
 
-    def __init__(self, config_files: Path):
+    def __init__(self, config_filepath: Path, interpolation_functions_dir: Path):
         self.cctx = zstandard.ZstdCompressor()
+        with open(config_filepath, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+        self.GROUPS = {
+            script: group
+            for group, scripts in config["GROUPS"].items()
+            for script in scripts
+        }
+        self.FUNCTION_FILES = config["FUNCTION_FILES"]
+        self.OUTSIDERS_FIX = config["OUTSIDERS_FIX"]
         self.functions = {
-            group: joblib.load(os.path.join(config_files, file))
+            group: joblib.load(os.path.join(interpolation_functions_dir, file))
             for group, file in self.FUNCTION_FILES.items()
         }
 
-    def _get_group(self, script_code: str) -> str:
+    def _get_group(self, script_code: str) -> Any:
         # Group A is the default
         return self.GROUPS.get(script_code, "GROUP_A")
 
