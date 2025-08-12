@@ -5,8 +5,8 @@ Usage:
 """
 
 # ruff: noqa: E501
-import os
 import sys
+from pathlib import Path
 
 import docopt
 import pandas as pd
@@ -14,13 +14,13 @@ import pandas as pd
 args = docopt.docopt(__doc__, version="printbook v 1.0")
 
 
-input_path = args["--input"]
-if not os.path.exists(input_path):
+input_path = Path(args["--input"])
+if not input_path.exists():
     print(f"File {input_path} not found")
     sys.exit(-1)
 
-output_path = args["--output"]
-if not os.path.exists(output_path):
+output_path = Path(args["--output"])
+if not output_path.exists():
     print(f"Directory {output_path} not found")
     sys.exit(-1)
 
@@ -31,10 +31,11 @@ text2 = ""
 
 is_first = True
 print("Creating HTML view")
-for file in os.listdir(input_path):
+for file in input_path.iterdir():
     print(f"File analized: {file}")
-    df = pd.read_csv(os.path.join(input_path, file))
+    df = pd.read_csv(input_path / file)
     data_list = []
+    file_name = file.stem
     for n in range(101):
         i = n / 10
         data_in_frame = df[(df.wds_score > round(i - 0.1, 1)) & (df.wds_score <= i)]
@@ -63,7 +64,7 @@ for file in os.listdir(input_path):
             + f", {', '.join([str(x) for x in data_list])}];"
         )
         text1 += (
-            f"if (selectedValue === '{file.split('_')[0]}') {'{'}\n            newData = [['Score', 'Count',"
+            f"if (selectedValue === '{file_name.split('_')[0]}') {'{'}\n            newData = [['Score', 'Count',"
             + "{'type': 'string', 'role': 'tooltip', 'p': {'html': true}}]"
             + f", {', '.join([str(x) for x in data_list])}];\n"
         )
@@ -72,11 +73,11 @@ for file in os.listdir(input_path):
     else:
 
         text1 += (
-            f"          {'}'} else if (selectedValue === '{file.split('_')[0]}') {'{'}\n            newData = [['Score', 'Count',"
+            f"          {'}'} else if (selectedValue === '{file_name.split('_')[0]}') {'{'}\n            newData = [['Score', 'Count',"
             + "{'type': 'string', 'role': 'tooltip', 'p': {'html': true}}]"
             + f", {', '.join([str(x) for x in data_list])}];\n"
         )
-    text2 += f'<option value="{file.split("_")[0]}">{file.split("_")[0]}</option>\n'
+    text2 += f'<option value="{file_name.split("_")[0]}">{file_name.split("_")[0]}</option>\n'
 
 text0 = text0.replace("'cstm", "cstm").replace("']", "]").replace("nan", "null")
 text1 = text1.replace("'cstm", "cstm").replace("']", "]").replace("nan", "null")
@@ -259,5 +260,5 @@ html = html.replace("__DATA0__", text0)
 html = html.replace("__DATA1__", text1 + "\n}")
 html = html.replace("__DATA2__", text2)
 
-with open(os.path.join(output_path, "wds_scores.html"), "w", encoding="utf8") as file:
-    file.write(html)
+with open(output_path / "wds_scores.html", "w", encoding="utf8") as f:
+    f.write(html)

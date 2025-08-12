@@ -1,5 +1,4 @@
 import json
-import os
 import re
 from pathlib import Path
 from typing import Any
@@ -30,7 +29,7 @@ class InformativenessScorer:
         self.FUNCTION_FILES = config["FUNCTION_FILES"]
         self.OUTSIDERS_FIX = config["OUTSIDERS_FIX"]
         self.functions = {
-            group: joblib.load(os.path.join(interpolation_functions_dir, file))
+            group: joblib.load(interpolation_functions_dir / file)
             for group, file in self.FUNCTION_FILES.items()
         }
 

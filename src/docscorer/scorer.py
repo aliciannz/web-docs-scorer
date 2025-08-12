@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -136,33 +135,31 @@ class DocumentScorer:
         )
 
     def score_directory(self, input_path: Path, output_path: Path) -> None:
-        for json_f in os.listdir(input_path):
-            if json_f.endswith(".jsonl"):
-                if not re.match("[a-z]{3}_[A-Z][a-z]{3}$", json_f.split(".")[0]):
+        for json_f in input_path.iterdir():
+            documents_filename = json_f.stem
+            if json_f.suffix == ".jsonl":
+                if not re.match(
+                    "[a-z]{3}_[A-Z][a-z]{3}$", documents_filename.split(".")[0]
+                ):
                     logging.error(
                         f"{json_f} is not a well formed named → eng_Latn.jsonl"
                     )
                     continue
-                documents = os.path.join(input_path, json_f)
-                file_name = os.path.splitext(os.path.basename(json_f))[0]
-                writing_path = os.path.join(output_path, f"{file_name}.csv")
+
+                writing_path = output_path / f"{documents_filename}.csv"
                 df = pd.DataFrame(columns=["score"])
 
-                lang_script = json_f.split(".")[0].split("_")
-                language = lang_script[0].lower()
-                script = lang_script[1].lower()
-                script = (
-                    self.config.EQUIVALENT_SCRIPTS[script]
-                    if script in self.config.EQUIVALENT_SCRIPTS
-                    else script
-                )
+                lang, script = documents_filename.split("_")
+                language = lang.lower()
+                script = script.lower()
+                script = self.config.EQUIVALENT_SCRIPTS.get(script, script)
 
                 i = 0
-                logging.info(f"Processing: {file_name}")
-                with open(documents, "r", encoding="utf-8") as file:
+                logging.info(f"Processing: {documents_filename}")
+                with open(documents_filename, "r", encoding="utf-8") as file:
                     n_lines = sum(1 for _ in file)
-                    logging.info(f"{file_name} - {n_lines} documents")
-                with open(documents, "r", encoding="utf-8") as file:
+                    logging.info(f"{documents_filename} - {n_lines} documents")
+                with open(documents_filename, "r", encoding="utf-8") as file:
                     for document_file in file:
                         document = json.loads(document_file)
                         document["document_lang"] = language
