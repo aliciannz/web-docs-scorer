@@ -46,7 +46,7 @@ Homepage = "https://github.com/pablop16n/web-docs-scorer/"
 
 
 [tool.setuptools.package-data]
-docscorer = [ "configurations/language_adaption/*", "configurations/interpolation_functions/*"]
+docscorer = [ "configurations/*"]
 
 
 [project.optional-dependencies]
