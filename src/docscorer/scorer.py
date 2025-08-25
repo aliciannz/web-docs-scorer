@@ -1,8 +1,9 @@
 import json
 import logging
 import re
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -16,6 +17,20 @@ from docscorer.scorers.punct_scorer import PunctScorer
 from docscorer.scorers.repeated_scorer import RepeatedScorer
 from docscorer.scorers.url_scorer import URLScorer
 from docscorer.utils import custom_mean
+
+
+@dataclass
+class ScoreResult:
+    """Holds all individual scores for a document."""
+
+    language: float
+    punctuation: float
+    singular_chars: float
+    numbers: float
+    repeated: float
+    url: float
+    informativeness: float
+    long_segments: Tuple[float, float]  # [short_score, long_score]
 
 
 class DocumentScorer:
@@ -36,101 +51,140 @@ class DocumentScorer:
         self.long_text_scorer = LongTextScorer(self.config)
         self.repeated_scorer = RepeatedScorer(self.config)
 
-    ## MAIN SCORING FUNCTION
+    def _extract_features(self, document_text: str) -> dict[str, list[int]]:
+        """Extract counts of words, punctuation, sing. chars, and numbers per line."""
+        features = [
+            (
+                len(self.config.word_pattern.findall(segment)),
+                len(self.config.punctuation_pattern.findall(segment)),
+                len(self.config.singular_chars_pattern.findall(segment)),
+                len(self.config.numbers_pattern.findall(segment)),
+            )
+            for segment in document_text.split("\n")
+        ]
+        return {
+            "word_chars": [f[0] for f in features],
+            "punctuation_chars": [f[1] for f in features],
+            "singular_chars": [f[2] for f in features],
+            "numbers": [f[3] for f in features],
+        }
+
+    def _compute_scores(
+        self,
+        ref_lang: str,
+        lang_segments: list[str],
+        scores_lang: list[float] | None,
+        document_text: str,
+        script_sys: str,
+        doc_id: str,
+        features: dict[str, list[int]],
+    ) -> ScoreResult:
+        """Compute all scorer outputs and return structured results."""
+        num_word_chars = sum(features["word_chars"])
+        num_punctuation_chars = sum(features["punctuation_chars"])
+        num_singular_chars = sum(features["singular_chars"])
+        num_numbers = sum(features["numbers"])
+
+        return ScoreResult(
+            language=self.lang_scorer.score(
+                ref_lang, lang_segments, scores_lang, features["word_chars"], doc_id
+            ),
+            punctuation=self.punct_scorer.score(
+                ref_lang, num_punctuation_chars, num_word_chars
+            ),
+            singular_chars=self.chars_scorer.score(
+                ref_lang, num_singular_chars, num_word_chars
+            ),
+            numbers=self.numbers_scorer.score(ref_lang, num_numbers, num_word_chars),
+            repeated=self.repeated_scorer.score(ref_lang, document_text),
+            url=self.url_scorer.score(ref_lang, document_text, features["word_chars"]),
+            long_segments=self.long_text_scorer.score(
+                ref_lang, lang_segments, features["word_chars"]
+            ),
+            informativeness=self.info_scorer.score(document_text, script_sys),
+        )
+
+    def _aggregate_scores(self, scores: ScoreResult) -> float:
+        """Aggregate individual scores into a single overall score."""
+        score = (
+            scores.language * 0.8
+            + scores.long_segments[0] / 10
+            + scores.long_segments[1] / 10
+        ) * custom_mean(
+            [
+                scores.url / 10,
+                scores.punctuation / 10,
+                scores.singular_chars / 10,
+                scores.numbers / 10,
+                scores.repeated / 10,
+                scores.informativeness / 10,
+            ]
+        )
+        return min(round(score, 1), 10.0)
+
+    def _format_output(
+        self,
+        overall_score: float,
+        scores: ScoreResult,
+        document_text: str,
+        raw_score: bool,
+    ) -> float | List[float | str]:
+        """Format the output depending on configuration."""
+        if raw_score:
+            return overall_score
+
+        final_score: list[float | str] = [
+            overall_score,
+            round(scores.language, 1),
+            round(scores.url, 1),
+            round(scores.punctuation, 1),
+            round(scores.singular_chars, 1),
+            round(scores.numbers, 1),
+            round(scores.repeated, 1),
+            round(scores.long_segments[0], 1),
+            round(scores.long_segments[1], 1),
+            round(scores.informativeness, 1),
+        ]
+
+        if self.config.text_in_output:
+            final_score.append(document_text.replace("\n", "\\n"))
+
+        return final_score
 
     def score_text(
         self,
         ref_lang: str,
         lang_segments: List[str],
-        scores_lang: Optional[List[float]],
+        scores_lang: List[float] | None,
         document_text: str,
         script_sys: str,
-        id: str,
-        raw_score: float,
-    ) -> float | List[float]:
-
-        condensed_data = [
-            (
-                len(re.findall(self.config.word_pattern, segment)),
-                len(re.findall(self.config.punctuation_pattern, segment)),
-                len(re.findall(self.config.singular_chars_pattern, segment)),
-                len(re.findall(self.config.numbers_pattern, segment)),
-            )
-            for segment in document_text.split("\n")
-        ]
-
-        word_chars = [x[0] for x in condensed_data]
-        punctuation_chars = [x[1] for x in condensed_data]
-        singular_chars = [x[2] for x in condensed_data]
-        numbers = [x[3] for x in condensed_data]
+        doc_id: str,
+        raw_score: bool,
+    ) -> float | List[float | str]:
         ref_lang = ref_lang[0] if isinstance(ref_lang, list) else ref_lang
-
-        num_singular_chars = sum(singular_chars)
-        num_word_chars = sum(word_chars)
-        num_punctuation_chars = sum(punctuation_chars)
-        num_numbers = sum(numbers)
-        language_score = self.lang_scorer.score(
-            ref_lang, lang_segments, scores_lang, word_chars, id
+        features = self._extract_features(document_text)
+        scores = self._compute_scores(
+            ref_lang,
+            lang_segments,
+            scores_lang,
+            document_text,
+            script_sys,
+            doc_id,
+            features,
         )
-        punctuation_score = self.punct_scorer.score(
-            ref_lang, num_punctuation_chars, num_word_chars
-        )
-        singular_chars_score = self.chars_scorer.score(
-            ref_lang, num_singular_chars, num_word_chars
-        )
-        numbers_score = self.numbers_scorer.score(ref_lang, num_numbers, num_word_chars)
-        repeated_score = self.repeated_scorer.score(ref_lang, document_text)
-        url_score = self.url_scorer.score(ref_lang, document_text, word_chars)
-        long_segments_scores = self.long_text_scorer.score(
-            ref_lang, lang_segments, word_chars
-        )
-        informativeness_score = self.info_scorer.score(document_text, script_sys)
-
-        score = (
-            language_score * 0.8
-            + long_segments_scores[0] / 10
-            + long_segments_scores[1] / 10
-        ) * custom_mean(
-            [
-                url_score / 10,
-                punctuation_score / 10,
-                singular_chars_score / 10,
-                numbers_score / 10,
-                repeated_score / 10,
-                informativeness_score / 10,
-            ]
-        )
-
-        if raw_score:
-            return round(score, 1) if score <= 10 else 10
-
-        final_score: List[Any] = [
-            round(score, 1) if score <= 10 else 10,
-            round(language_score, 1),
-            round(url_score, 1),
-            round(punctuation_score, 1),
-            round(singular_chars_score, 1),
-            round(numbers_score, 1),
-            round(repeated_score, 1),
-            round(long_segments_scores[0], 1),
-            round(long_segments_scores[1], 1),
-            round(informativeness_score, 1),
-        ]
-
-        if self.config.text_in_output:
-            final_score.append(document_text.replace("\n", "\\n"))
-        return final_score
+        overall_score = self._aggregate_scores(scores)
+        return self._format_output(overall_score, scores, document_text, raw_score)
 
     def score_document(
         self, document: Dict[str, Any], raw_score: bool = False
-    ) -> float | List[float]:
+    ) -> float | List[float | str]:
         return self.score_text(
             ref_lang=f"{document['document_lang']}_{document['script']}",
             lang_segments=document["langs"],
             scores_lang=document["scores"] if "scores" in document else None,
             document_text=document["text"],
             script_sys=document["script"],
-            id=document["id"],
+            doc_id=document["id"],
             raw_score=raw_score,
         )
 
