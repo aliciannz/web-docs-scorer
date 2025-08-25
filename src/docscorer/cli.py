@@ -23,6 +23,7 @@ usage = (
     "  --info_score_config=<path>         Path to informativeness config dir\n"
     "  --lang_code_conversion=<path>      Path to lang_code_conversion.json\n"
     "  --lang_families_config=<path>      Path to lang families CSV\n"
+    "  --char_patterns_config=<path>      Path to char patterns config JSON\n"
     "  --text_in_output                   Include original text in output\n"
     "  --only_final_score                 Only include final score in output\n"
     "  -h --help                         Show this screen\n"
