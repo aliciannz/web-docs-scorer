@@ -39,7 +39,6 @@ class DocumentScorer:
         self.benchmark_config = self.config.benchmark_config
         self.lang_code_conversion = self.config.lang_code_conversion
         self.lang_families_config = self.config.lang_families_config
-        self.interpolation_functions_dir = self.config.interpolation_functions_dir
         self.info_scorer = InformativenessScorer(
             self.config.info_score_config, self.config.interpolation_functions_dir
         )
@@ -189,14 +188,15 @@ class DocumentScorer:
         )
 
     def score_directory(self, input_path: Path, output_path: Path) -> None:
-        for json_f in input_path.iterdir():
-            documents_filename = json_f.stem
-            if json_f.suffix == ".jsonl":
+        for documents_file in input_path.iterdir():
+            documents_filename = documents_file.stem
+
+            if documents_file.suffix == ".jsonl":
                 if not re.match(
                     "[a-z]{3}_[A-Z][a-z]{3}$", documents_filename.split(".")[0]
                 ):
                     logging.error(
-                        f"{json_f} is not a well formed named → eng_Latn.jsonl"
+                        f"{documents_file} is not a well formed named → eng_Latn.jsonl"
                     )
                     continue
 
@@ -209,11 +209,11 @@ class DocumentScorer:
                 script = self.config.EQUIVALENT_SCRIPTS.get(script, script)
 
                 i = 0
-                logging.info(f"Processing: {documents_filename}")
-                with open(documents_filename, "r", encoding="utf-8") as file:
+                logging.info(f"Processing: {documents_file}")
+                with open(documents_file, "r", encoding="utf-8") as file:
                     n_lines = sum(1 for _ in file)
                     logging.info(f"{documents_filename} - {n_lines} documents")
-                with open(documents_filename, "r", encoding="utf-8") as file:
+                with open(documents_file, "r", encoding="utf-8") as file:
                     for document_file in file:
                         document = json.loads(document_file)
                         document["document_lang"] = language
@@ -241,7 +241,7 @@ class DocumentScorer:
                             else:
                                 langs_fixed.append(x)
 
-                        document["langs"] = langs_fixed
+                        document["langs"] = ["eng_latn"]
                         document_score = self.score_document(document=document)
                         docid = document["id"]
                         df.loc[docid] = [document_score]
