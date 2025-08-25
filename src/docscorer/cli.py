@@ -5,7 +5,7 @@ from pathlib import Path
 from docopt import docopt
 
 from docscorer.configuration import ScorerConfiguration
-from docscorer.scorer import DocumentScorer
+from docscorer.docscorer import DocumentScorer
 
 usage = (
     "Document Scoring Tool\n\n"

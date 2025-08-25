@@ -2,7 +2,7 @@
 
 from importlib.metadata import version
 
-from docscorer.scorer import DocumentScorer
+from docscorer.docscorer import DocumentScorer
 
 name = "docscorer"
 __version__ = version(name)
